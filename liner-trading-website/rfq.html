@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Request a Quote — Liner Trading PLC</title>
+<meta name="description" content="Get a structured export quote from Liner Trading PLC: Incoterm, destination, shipping method and volume, all in one form.">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="canonical" href="https://YOUR-DOMAIN-HERE.com/rfq.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Liner Trading PLC">
+<meta property="og:title" content="Request a Quote — Liner Trading PLC">
+<meta property="og:description" content="Get a structured export quote from Liner Trading PLC: Incoterm, destination, shipping method and volume, all in one form.">
+<meta property="og:image" content="https://YOUR-DOMAIN-HERE.com/og-image.png">
+<meta property="og:url" content="https://YOUR-DOMAIN-HERE.com/rfq.html">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Request a Quote — Liner Trading PLC">
+<meta name="twitter:description" content="Get a structured export quote from Liner Trading PLC: Incoterm, destination, shipping method and volume, all in one form.">
+<meta name="twitter:image" content="https://YOUR-DOMAIN-HERE.com/og-image.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to main content</a>
+
+<nav class="site-nav">
+  <div class="wrap">
+    <a href="index.html" class="brand">
+      <span class="brand-mark">LT</span>
+      <span class="brand-text"><strong>Liner Trading</strong><span>PLC · Addis Ababa</span></span>
+    </a>
+    <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false">☰</button>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="about.html">About</a>
+      <a href="products.html">Products</a>
+      <a href="import.html">Import</a>
+      <a href="tools.html">Trade Tools</a>
+      <a href="compliance.html">Compliance</a>
+      <a href="portal.html">Client Portal</a>
+      <a href="contact.html">Contact</a>
+    </div>
+    <div class="nav-cta"><a href="rfq.html" class="btn btn-primary btn-sm"><span class="btn-long">Request</span> Quote</a></div>
+  </div>
+</nav>
+
+<header class="on-steel section-tight">
+  <div class="wrap">
+    <div class="eyebrow">Request For Quote</div>
+    <h1 style="color:#fff; font-size:clamp(2.2rem,5vw,3.4rem);">One Form. One Real Quote.</h1>
+    <p style="color:rgba(236,231,217,0.82); max-width:640px; font-size:1.1rem;">Fill in the specifics once — product, Incoterm, destination and volume — and our trade team responds with pricing, not a request for the details you already gave.</p>
+  </div>
+</header>
+
+<main id="main">
+  <section class="section-tight">
+    <div class="wrap grid grid-2" style="gap:56px; align-items:start;">
+
+      <form id="rfq-form" novalidate>
+        <fieldset>
+          <legend>Buyer Information</legend>
+          <div class="form-row">
+            <div class="field">
+              <label for="rfq-company">Company Name *</label>
+              <input class="input" id="rfq-company" name="company" required>
+              <p class="field-error">Enter your company name.</p>
+            </div>
+            <div class="field">
+              <label for="rfq-country">Country *</label>
+              <input class="input" id="rfq-country" name="country" required>
+              <p class="field-error">Enter your country.</p>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="rfq-name">Contact Name *</label>
+              <input class="input" id="rfq-name" name="name" required>
+              <p class="field-error">Enter a contact name.</p>
+            </div>
+            <div class="field">
+              <label for="rfq-email">Email *</label>
+              <input class="input" id="rfq-email" name="email" type="email" required>
+              <p class="field-error">Enter a valid email.</p>
+            </div>
+          </div>
+          <div class="field">
+            <label for="rfq-phone">Phone (optional, with country code)</label>
+            <input class="input" id="rfq-phone" name="phone" placeholder="+91 …">
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Product &amp; Order Specifics</legend>
+          <div class="field">
+            <label for="rfq-product">Product *</label>
+            <select class="select" id="rfq-product" name="product" required></select>
+            <p class="field-error">Select a product.</p>
+          </div>
+          <div class="field" id="product-other-wrap" style="display:none;">
+            <label for="rfq-product-other">Describe the product you're looking for</label>
+            <input class="input" id="rfq-product-other" name="productOther">
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="rfq-quantity">Quantity *</label>
+              <input class="input" id="rfq-quantity" name="quantity" type="number" min="1" required>
+              <p class="field-error">Enter a quantity.</p>
+            </div>
+            <div class="field">
+              <label for="rfq-unit">Unit *</label>
+              <select class="select" id="rfq-unit" name="unit" required>
+                <option value="MT">Metric Tons</option>
+                <option value="Bags">Bags</option>
+                <option value="20ft Containers">20ft Containers</option>
+                <option value="40ft Containers">40ft Containers</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label for="rfq-packaging">Packaging / labeling preferences</label>
+            <textarea class="textarea" id="rfq-packaging" name="packaging" placeholder="Bag size, private label, pallet vs. floor-loaded, etc."></textarea>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Logistics</legend>
+          <div class="form-row">
+            <div class="field">
+              <label for="rfq-incoterm">Incoterm *</label>
+              <select class="select" id="rfq-incoterm" name="incoterm" required></select>
+              <p class="field-error">Select an Incoterm.</p>
+            </div>
+            <div class="field">
+              <label for="rfq-shipping">Shipping Method *</label>
+              <select class="select" id="rfq-shipping" name="shipping" required>
+                <option value="Ocean FCL">Ocean — Full Container Load</option>
+                <option value="Ocean LCL">Ocean — Shared Container (LCL)</option>
+                <option value="Air Freight">Air Freight</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="rfq-destination">Destination Port / City *</label>
+              <input class="input" id="rfq-destination" name="destination" required>
+              <p class="field-error">Enter a destination.</p>
+            </div>
+            <div class="field">
+              <label for="rfq-shipdate">Target Shipment Date</label>
+              <input class="input" id="rfq-shipdate" name="shipDate" type="date">
+            </div>
+          </div>
+          <p class="small muted">Not sure which container size you need? Use the <a href="tools.html" style="text-decoration:underline;">CBM Calculator</a> and come back with a number.</p>
+        </fieldset>
+
+        <fieldset>
+          <legend>Anything Else</legend>
+          <div class="field">
+            <label for="rfq-notes">Additional notes</label>
+            <textarea class="textarea" id="rfq-notes" name="notes" placeholder="Certifications required, inspection preferences, payment terms you'd like to discuss…"></textarea>
+          </div>
+        </fieldset>
+
+        <button class="btn btn-primary btn-block" type="submit">Review &amp; Generate Quote Request</button>
+      </form>
+
+      <div>
+        <div class="card mb-24 reveal">
+          <h4 class="mb-16">What Happens Next</h4>
+          <ol style="padding-left:0;">
+            <li class="small mb-16"><span class="hs-badge" style="margin-right:8px;">1</span>Submitting builds a structured summary below — review it before sending.</li>
+            <li class="small mb-16"><span class="hs-badge" style="margin-right:8px;">2</span>"Email This Request" opens your mail client with everything pre-filled.</li>
+            <li class="small"><span class="hs-badge" style="margin-right:8px;">3</span>Our trade team reviews it and follows up with pricing and next steps.</li>
+          </ol>
+        </div>
+        <div id="rfq-result"></div>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div>
+        <div class="brand mb-16" style="color:#fff;">
+          <span class="brand-mark">LT</span>
+          <span class="brand-text"><strong>Liner Trading PLC</strong><span>Where Trade Meets Trust</span></span>
+        </div>
+        <p class="small" style="max-width:280px;">Ethiopian agricultural export, industrial salt manufacturing, and import trade — based in Addis Ababa since 2015.</p>
+      </div>
+      <div>
+        <h4>Navigate</h4>
+        <ul>
+          <li><a href="products.html">Export Catalog</a></li>
+          <li><a href="import.html">Import Trading</a></li>
+          <li><a href="tools.html">Trade Tools</a></li>
+          <li><a href="compliance.html">Compliance Vault</a></li>
+          <li><a href="portal.html">Client Portal</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Company</h4>
+        <ul>
+          <li><a href="about.html">About Us</a></li>
+          <li><a href="rfq.html">Request a Quote</a></li>
+          <li><a href="contact.html">Contact</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Reach Us</h4>
+        <ul>
+          <li>Garamuleta Building, 1st Floor<br>Ethio-China St, Wello Sefer<br>Addis Ababa, Ethiopia</li>
+          <li><a href="tel:+251936008676">+251 93 600 8676</a></li>
+          <li data-hours-badge>Checking hours…</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© <span data-year></span> Liner Trading PLC. All rights reserved. · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a></span>
+      <span>Working demo site — see README before publishing.</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase-config.js"></script>
+<script src="js/app.js"></script>
+<script src="js/rfq.js"></script>
+<script src="js/assistant.js"></script>
+</body>
+</html>

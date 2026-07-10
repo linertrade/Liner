@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <defs>
+    <style>
+      .wordmark { font-family: 'DejaVu Sans Condensed', 'DejaVu Sans', sans-serif; font-weight: bold; }
+      .mono { font-family: 'DejaVu Sans Mono', monospace; }
+    </style>
+  </defs>
+  <rect width="1200" height="630" fill="#1E3634"/>
+
+  <!-- hairline frame, echoes the manifest-paper structural language -->
+  <rect x="48" y="48" width="1104" height="534" fill="none" stroke="#3A5754" stroke-width="1.5"/>
+
+  <!-- stamp ring motif, top right -->
+  <g transform="translate(1005,160) rotate(-9)">
+    <circle r="86" fill="none" stroke="#C4923A" stroke-width="4"/>
+    <circle r="70" fill="none" stroke="#C4923A" stroke-width="1.5" opacity="0.6"/>
+    <text class="mono" x="0" y="-6" font-size="15" fill="#F7F4EE" text-anchor="middle" letter-spacing="1">WHERE TRADE</text>
+    <text class="mono" x="0" y="16" font-size="15" fill="#F7F4EE" text-anchor="middle" letter-spacing="1">MEETS TRUST</text>
+  </g>
+
+  <text class="mono" x="90" y="180" font-size="20" fill="#C4923A" letter-spacing="4">EST. 2015 — ADDIS ABABA, ETHIOPIA</text>
+
+  <text class="wordmark" x="86" y="300" font-size="92" fill="#FFFFFF">LINER TRADING</text>
+  <text class="wordmark" x="86" y="392" font-size="92" fill="#FFFFFF">PLC</text>
+
+  <text class="mono" x="90" y="460" font-size="22" fill="#EDEAE2" letter-spacing="1">Export</text>
+  <text class="mono" x="220" y="460" font-size="22" fill="#7A9490">·</text>
+  <text class="mono" x="245" y="460" font-size="22" fill="#EDEAE2" letter-spacing="1">Salt Manufacturing</text>
+  <text class="mono" x="520" y="460" font-size="22" fill="#7A9490">·</text>
+  <text class="mono" x="545" y="460" font-size="22" fill="#EDEAE2" letter-spacing="1">Import Trading</text>
+
+  <line x1="90" y1="500" x2="1110" y2="500" stroke="#3A5754" stroke-width="1.5"/>
+  <text class="mono" x="90" y="540" font-size="18" fill="#9A9484" letter-spacing="2">PULSES</text>
+  <text class="mono" x="220" y="540" font-size="18" fill="#9A9484" letter-spacing="2">COFFEE</text>
+  <text class="mono" x="350" y="540" font-size="18" fill="#9A9484" letter-spacing="2">OIL SEEDS</text>
+  <text class="mono" x="510" y="540" font-size="18" fill="#9A9484" letter-spacing="2">SALT</text>
+  <text class="mono" x="620" y="540" font-size="18" fill="#9A9484" letter-spacing="2">HS-CODED CATALOG · RFQ · LIVE TRACKING</text>
+</svg>

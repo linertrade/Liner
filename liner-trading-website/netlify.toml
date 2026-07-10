@@ -1,0 +1,31 @@
+# Liner Trading PLC — Netlify configuration
+# Deploy this whole folder as a Netlify site (drag-and-drop or connect the repo).
+# Netlify auto-detects this file; no other setup is required beyond setting
+# the AIRTABLE_TOKEN environment variable (Site settings → Environment variables).
+
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+# `publish = "."` means Netlify serves every file in this folder as a static
+# asset unless told otherwise. netlify/functions/* is handled specially by
+# Netlify (bundled into serverless functions, not published as raw source),
+# but supabase/schema.sql has no such special handling — without this rule
+# it would be downloadable at /supabase/schema.sql. Nothing secret is in that
+# file, but there's no reason to publish your DB schema either.
+[[redirects]]
+  from = "/supabase/*"
+  to = "/404.html"
+  status = 404
+  force = true
+
+# If your host uses a custom 404 (not applicable on Netlify, which
+# auto-serves 404.html for unmatched routes) adjust here.
+
+# If your Airtable function errors with "fetch is not defined", set this to
+# force a recent Node runtime (18+) which has global fetch built in.
+[build.environment]
+  AWS_LAMBDA_JS_RUNTIME = "nodejs18.x"
