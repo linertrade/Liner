@@ -15,8 +15,8 @@
 const { fetchProducts } = require('./_lib/airtable');
 
 // Change this if xAI retires/renames the model — check https://docs.x.ai
-const XAI_MODEL = 'grok-4.3';
-const XAI_ENDPOINT = 'https://api.x.ai/v1/responses';
+const XAI_MODEL = 'grok-3-latest';
+const XAI_ENDPOINT = 'https://api.x.ai/v1/chat/completions';
 
 // Same public URL + anon key as js/supabase-config.js (safe to duplicate —
 // neither is secret; RLS is the actual access boundary, see supabase/schema.sql).
@@ -75,9 +75,11 @@ ${orderText}`;
 }
 
 function extractReplyText(xaiResponse) {
-  const messageItem = (xaiResponse.output || []).find((o) => o.type === 'message');
-  const textPart = messageItem && (messageItem.content || []).find((c) => c.type === 'output_text');
-  return textPart ? textPart.text : null;
+  // chat/completions format: choices[0].message.content
+  return (xaiResponse.choices &&
+    xaiResponse.choices[0] &&
+    xaiResponse.choices[0].message &&
+    xaiResponse.choices[0].message.content) || null;
 }
 
 exports.handler = async function (event) {
@@ -121,7 +123,7 @@ exports.handler = async function (event) {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
         model: XAI_MODEL,
-        input: [
+        messages: [
           { role: 'system', content: systemPrompt },
           ...history.map((h) => ({
             role: h.role === 'assistant' ? 'assistant' : 'user',
