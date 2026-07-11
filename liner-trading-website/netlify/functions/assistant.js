@@ -5,7 +5,7 @@
 
 const { fetchProducts } = require('./_lib/airtable');
 
-const XAI_MODEL = 'grok-3-latest';
+const XAI_MODEL = 'grok-4.3';
 const XAI_ENDPOINT = 'https://api.x.ai/v1/chat/completions';
 
 const SUPABASE_URL = 'https://bbfmpeavpqbvwigsdkiy.supabase.co';
