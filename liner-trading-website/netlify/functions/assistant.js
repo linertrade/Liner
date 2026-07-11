@@ -1,12 +1,17 @@
 /* ==========================================================================
    Netlify Function: POST /.netlify/functions/assistant
-   Proxies xAI's Grok API so the XAI_API_KEY never reaches the browser.
+   Proxies Google's Gemini API so the GEMINI_API_KEY never reaches the
+   browser. Uses Gemini's OpenAI-compatible endpoint, so the request/response
+   shape matches what you'd send to OpenAI or xAI.
    ========================================================================== */
 
 const { fetchProducts } = require('./_lib/airtable');
 
-const XAI_MODEL = 'grok-4.3';
-const XAI_ENDPOINT = 'https://api.x.ai/v1/chat/completions';
+// Change this if Google retires/renames the model — check https://ai.google.dev/gemini-api/docs/models
+// gemini-3.5-flash is free-tier eligible (no payment method required) as of
+// mid-2026 — Pro-tier models generally are NOT free, so stick to Flash/Flash-Lite.
+const GEMINI_MODEL = 'gemini-3.5-flash';
+const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
 
 const SUPABASE_URL = 'https://bbfmpeavpqbvwigsdkiy.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJiZm1wZWF2cHFidndpZ3Nka2l5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMzMzMwNzMsImV4cCI6MjA5ODkwOTA3M30.ijxgarNCjWS41xtBxQ3GVSH1L6F1EbMcD6Vrre1UrcY';
@@ -62,11 +67,11 @@ CUSTOMER ORDER DATA:
 ${orderText}`;
 }
 
-// Different xAI failure types (bad key, no billing, bad model, rate limit)
-// don't all shape their error the same way — check a few possibilities
-// instead of assuming one, and fall back to the raw response text so we
-// NEVER show a blank/generic message again.
-function extractXaiError(status, data, rawText) {
+// Different failure types (bad key, no billing, bad model, rate limit) don't
+// all shape their error the same way — check a few possibilities instead of
+// assuming one, and fall back to the raw response text so we NEVER show a
+// blank/generic message again.
+function extractApiError(status, data, rawText) {
   if (data) {
     if (data.error) {
       if (typeof data.error === 'string') return data.error;
@@ -75,7 +80,7 @@ function extractXaiError(status, data, rawText) {
     if (data.message) return data.message;
   }
   if (rawText) return rawText.slice(0, 300);
-  return `xAI returned HTTP ${status} with no error body`;
+  return `Gemini returned HTTP ${status} with no error body`;
 }
 
 exports.handler = async function (event) {
@@ -83,11 +88,11 @@ exports.handler = async function (event) {
     return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
   }
 
-  const apiKey = process.env.XAI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'XAI_API_KEY is not set. Add it in Netlify → Site settings → Environment variables, then redeploy.' }),
+      body: JSON.stringify({ error: 'GEMINI_API_KEY is not set. Add it in Netlify → Site settings → Environment variables, then redeploy.' }),
     };
   }
 
@@ -114,11 +119,11 @@ exports.handler = async function (event) {
   const systemPrompt = buildSystemPrompt(products, orders);
 
   try {
-    const res = await fetch(XAI_ENDPOINT, {
+    const res = await fetch(GEMINI_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: XAI_MODEL,
+        model: GEMINI_MODEL,
         messages: [
           { role: 'system', content: systemPrompt },
           ...history.map((h) => ({
@@ -137,16 +142,17 @@ exports.handler = async function (event) {
     try { data = JSON.parse(rawText); } catch { /* leave data null, use rawText below */ }
 
     if (!res.ok) {
-      const errMsg = extractXaiError(res.status, data, rawText);
-      console.error('xAI error', res.status, rawText);
-      return { statusCode: res.status, body: JSON.stringify({ error: `xAI ${res.status}: ${errMsg}` }) };
+      const errMsg = extractApiError(res.status, data, rawText);
+      console.error('Gemini error', res.status, rawText);
+      return { statusCode: res.status, body: JSON.stringify({ error: `Gemini ${res.status}: ${errMsg}` }) };
     }
 
+    // OpenAI-compatible response shape: choices[0].message.content
     const reply = (data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content)
       || "Sorry, I couldn't put together a reply just now — try again, or use the RFQ form.";
 
     return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reply }) };
   } catch (err) {
-    return { statusCode: 502, body: JSON.stringify({ error: `Could not reach xAI: ${err.message}` }) };
+    return { statusCode: 502, body: JSON.stringify({ error: `Could not reach Gemini: ${err.message}` }) };
   }
 };
