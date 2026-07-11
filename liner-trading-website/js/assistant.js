@@ -1,144 +1,147 @@
 /* ==========================================================================
-   AI Trade Assistant — floating widget, loaded on every page.
-   Talks to /.netlify/functions/assistant (never calls xAI directly — the API
-   key stays server-side). If the visitor is logged in via Supabase, their
-   session access token rides along so the assistant can answer questions
-   about their own orders; RLS on the server enforces that it can never see
-   anyone else's data. Conversation history is in-memory only (resets on
-   page reload) — no backend chat history is stored.
+   Netlify Function: POST /.netlify/functions/assistant
+   Proxies xAI's Grok API so the XAI_API_KEY never reaches the browser — same
+   pattern as products.js for the Airtable token. Read from the XAI_API_KEY
+   environment variable (Netlify → Site settings → Environment variables).
+
+   If an accessToken is included in the request body (the visitor's own
+   Supabase session, sent by js/assistant.js only when they're logged in),
+   this function fetches THEIR orders using THAT token — not the anon key,
+   not a service_role key — so Row Level Security enforces the same "only
+   your own orders" rule it always does. There is no path here that can see
+   another customer's data.
    ========================================================================== */
 
-(function () {
-  const ENDPOINT = '/.netlify/functions/assistant';
-  const history = [];
-  let panelBuilt = false;
-  let sending = false;
+const { fetchProducts } = require('./_lib/airtable');
 
-  function escapeHTML(str) {
-    const div = document.createElement('div');
-    div.textContent = str == null ? '' : String(str);
-    return div.innerHTML;
+// Change this if xAI retires/renames the model — check https://docs.x.ai
+const XAI_MODEL = 'grok-3-latest';
+const XAI_ENDPOINT = 'https://api.x.ai/v1/chat/completions';
+
+// Same public URL + anon key as js/supabase-config.js (safe to duplicate —
+// neither is secret; RLS is the actual access boundary, see supabase/schema.sql).
+const SUPABASE_URL = 'https://bbfmpeavpqbvwigsdkiy.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJiZm1wZWF2cHFidndpZ3Nka2l5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMzMzMwNzMsImV4cCI6MjA5ODkwOTA3M30.ijxgarNCjWS41xtBxQ3GVSH1L6F1EbMcD6Vrre1UrcY';
+
+const STAGE_LABELS = ['Order Confirmed', 'Production & QC', 'Export Clearance', 'Loaded at Djibouti Port', 'In Transit', 'Delivered'];
+
+const INCOTERMS_SUMMARY = `Any mode of transport: EXW (seller does the least — buyer handles everything from pickup), FCA (seller delivers to buyer's carrier), CPT (seller pays carriage, risk still passes early), CIP (like CPT + seller insures at the higher "all-risks" level), DAP (seller delivers, not unloaded), DPU (seller delivers AND unloads), DDP (seller does the most — duty paid, ready to unload).
+Sea/inland waterway only: FAS (seller delivers alongside the ship), FOB (risk passes once on board), CFR (seller pays freight, risk still passes at origin port), CIF (like CFR + seller insures at the minimum level).`;
+
+async function fetchCustomerOrders(accessToken) {
+  if (!accessToken) return null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/orders?select=order_number,product_name,stage,updated_at`, {
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+function buildSystemPrompt(products, orders) {
+  const catalogText = products.length
+    ? products.map((p) => `- ${p.name} (HS ${p.hs}): ${p.hsDesc}. Packaging: ${p.pack}. Typical MOQ: ${p.moq}.`).join('\n')
+    : '(Catalog temporarily unavailable — do not guess product details; direct the visitor to the Products page.)';
+
+  let orderText = 'The visitor is not logged in. No order data is available — if they ask about "my order" or shipping status, tell them to log in (or sign up) at the Client Portal.';
+  if (orders && orders.length) {
+    orderText = "The logged-in customer's real orders — use only this, never invent order details:\n" +
+      orders.map((o) => `- ${o.order_number}: ${o.product_name}, currently "${STAGE_LABELS[o.stage] || 'Unknown'}", last updated ${o.updated_at}`).join('\n');
+  } else if (orders && !orders.length) {
+    orderText = 'The visitor is logged in but has no orders linked to their account yet. Tell them their trade contact will attach an order once one is confirmed.';
   }
 
-  function build() {
-    if (panelBuilt) return;
-    panelBuilt = true;
+  return `You are the trade assistant on the Liner Trading PLC website, an Ethiopian agricultural export company in Addis Ababa (est. 2015, "Where Trade Meets Trust").
 
-    const toggle = document.createElement('button');
-    toggle.className = 'assistant-toggle';
-    toggle.type = 'button';
-    toggle.innerHTML = `<span class="dot"></span> Ask Us`;
-    toggle.setAttribute('aria-label', 'Open trade assistant chat');
+Scope: only answer questions about Liner Trading PLC's export catalog, HS codes, packaging/container sizing, Incoterms, and — if provided below — the logged-in visitor's own orders. Politely decline anything outside that (general chit-chat is fine briefly, but redirect off-topic or unrelated requests).
 
-    const panel = document.createElement('div');
-    panel.className = 'assistant-panel';
-    panel.innerHTML = `
-      <div class="assistant-head">
-        <div>
-          <strong>Trade Assistant</strong>
-          <span>Catalog · HS Codes · Your Orders</span>
-        </div>
-        <button class="assistant-close" type="button" aria-label="Close chat">✕</button>
-      </div>
-      <div class="assistant-messages" id="assistant-messages"></div>
-      <form class="assistant-input-row" id="assistant-form">
-        <input type="text" id="assistant-input" placeholder="Ask about a product, HS code, or your order…" autocomplete="off" maxlength="500">
-        <button type="submit">Send</button>
-      </form>
-    `;
+Hard rules:
+- Never invent HS codes, prices, lead times, or order status. If it's not in the data below, say you don't know and point to the RFQ form (rfq.html) or Contact page.
+- Never make commitments on the company's behalf (pricing, guaranteed dates, contract terms).
+- Only discuss order data for the account that is actually logged in — you are never given other customers' data, so you cannot leak it.
+- Keep answers short and concrete, plain text (no markdown tables).
 
-    document.body.appendChild(toggle);
-    document.body.appendChild(panel);
+CATALOG:
+${catalogText}
 
-    const messagesEl = panel.querySelector('#assistant-messages');
-    const form = panel.querySelector('#assistant-form');
-    const input = panel.querySelector('#assistant-input');
+INCOTERMS 2020 QUICK REFERENCE:
+${INCOTERMS_SUMMARY}
 
-    function open() {
-      panel.classList.add('is-open');
-      if (!messagesEl.childElementCount) {
-        addMessage('bot', "Hi — I can help with product specs, HS codes, container sizing, Incoterms, or your own order status if you're logged in. What do you need?");
-      }
-      input.focus();
-    }
-    function close() { panel.classList.remove('is-open'); }
+CUSTOMER ORDER DATA:
+${orderText}`;
+}
 
-    toggle.addEventListener('click', () => {
-      panel.classList.contains('is-open') ? close() : open();
-    });
-    panel.querySelector('.assistant-close').addEventListener('click', close);
+function extractReplyText(xaiResponse) {
+  // chat/completions format: choices[0].message.content
+  return (xaiResponse.choices &&
+    xaiResponse.choices[0] &&
+    xaiResponse.choices[0].message &&
+    xaiResponse.choices[0].message.content) || null;
+}
 
-    function addMessage(role, text) {
-      const el = document.createElement('div');
-      el.className = `assistant-message is-${role}`;
-      el.innerHTML = escapeHTML(text);
-      messagesEl.appendChild(el);
-      messagesEl.scrollTop = messagesEl.scrollHeight;
-      return el;
-    }
-
-    function setTyping(on) {
-      let el = messagesEl.querySelector('.assistant-typing');
-      if (on && !el) {
-        el = document.createElement('div');
-        el.className = 'assistant-typing';
-        el.textContent = 'Thinking…';
-        messagesEl.appendChild(el);
-        messagesEl.scrollTop = messagesEl.scrollHeight;
-      } else if (!on && el) {
-        el.remove();
-      }
-    }
-
-    async function getAccessToken() {
-      if (!window.LINER_SUPABASE) return null;
-      try {
-        const { data: { session } } = await window.LINER_SUPABASE.auth.getSession();
-        return session ? session.access_token : null;
-      } catch {
-        return null;
-      }
-    }
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const text = input.value.trim();
-      if (!text || sending) return;
-
-      sending = true;
-      input.value = '';
-      form.querySelector('button').disabled = true;
-      addMessage('user', text);
-      setTyping(true);
-
-      const accessToken = await getAccessToken();
-
-      try {
-        const res = await fetch(ENDPOINT, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: text, history, accessToken }),
-        });
-        const data = await res.json();
-        setTyping(false);
-
-        if (!res.ok) {
-          addMessage('error', data.error || "Something went wrong — try again in a moment.");
-        } else {
-          addMessage('bot', data.reply);
-          history.push({ role: 'user', content: text });
-          history.push({ role: 'assistant', content: data.reply });
-        }
-      } catch (err) {
-        setTyping(false);
-        addMessage('error', "Couldn't reach the assistant — check your connection and try again.");
-      }
-
-      sending = false;
-      form.querySelector('button').disabled = false;
-      input.focus();
-    });
+exports.handler = async function (event) {
+  if (event.httpMethod !== 'POST') {
+    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
   }
 
-  document.addEventListener('DOMContentLoaded', build);
-})();
+  const apiKey = process.env.XAI_API_KEY;
+  if (!apiKey) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'XAI_API_KEY is not set. Add it in Netlify → Site settings → Environment variables, then redeploy.' }),
+    };
+  }
+
+  let body;
+  try {
+    body = JSON.parse(event.body || '{}');
+  } catch {
+    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid request body' }) };
+  }
+
+  const message = String(body.message || '').trim().slice(0, 1000);
+  const history = Array.isArray(body.history) ? body.history.slice(-10) : [];
+  const accessToken = typeof body.accessToken === 'string' ? body.accessToken : null;
+
+  if (!message) {
+    return { statusCode: 400, body: JSON.stringify({ error: 'Empty message' }) };
+  }
+
+  const [products, orders] = await Promise.all([
+    fetchProducts().catch(() => []),
+    fetchCustomerOrders(accessToken),
+  ]);
+
+  const systemPrompt = buildSystemPrompt(products, orders);
+
+  try {
+    const res = await fetch(XAI_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: XAI_MODEL,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...history.map((h) => ({
+            role: h.role === 'assistant' ? 'assistant' : 'user',
+            content: String(h.content || '').slice(0, 1000),
+          })),
+          { role: 'user', content: message },
+        ],
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      return { statusCode: res.status, body: JSON.stringify({ error: (data.error && data.error.message) || 'xAI request failed' }) };
+    }
+
+    const reply = extractReplyText(data) || "Sorry, I couldn't put together a reply just now — try again, or use the RFQ form.";
+    return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reply }) };
+  } catch (err) {
+    return { statusCode: 502, body: JSON.stringify({ error: `Could not reach xAI: ${err.message}` }) };
+  }
+};
