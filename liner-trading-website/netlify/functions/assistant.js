@@ -1,25 +1,13 @@
 /* ==========================================================================
    Netlify Function: POST /.netlify/functions/assistant
-   Proxies xAI's Grok API so the XAI_API_KEY never reaches the browser — same
-   pattern as products.js for the Airtable token. Read from the XAI_API_KEY
-   environment variable (Netlify → Site settings → Environment variables).
-
-   If an accessToken is included in the request body (the visitor's own
-   Supabase session, sent by js/assistant.js only when they're logged in),
-   this function fetches THEIR orders using THAT token — not the anon key,
-   not a service_role key — so Row Level Security enforces the same "only
-   your own orders" rule it always does. There is no path here that can see
-   another customer's data.
+   Proxies xAI's Grok API so the XAI_API_KEY never reaches the browser.
    ========================================================================== */
 
 const { fetchProducts } = require('./_lib/airtable');
 
-// Change this if xAI retires/renames the model — check https://docs.x.ai
 const XAI_MODEL = 'grok-3-latest';
 const XAI_ENDPOINT = 'https://api.x.ai/v1/chat/completions';
 
-// Same public URL + anon key as js/supabase-config.js (safe to duplicate —
-// neither is secret; RLS is the actual access boundary, see supabase/schema.sql).
 const SUPABASE_URL = 'https://bbfmpeavpqbvwigsdkiy.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJiZm1wZWF2cHFidndpZ3Nka2l5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMzMzMwNzMsImV4cCI6MjA5ODkwOTA3M30.ijxgarNCjWS41xtBxQ3GVSH1L6F1EbMcD6Vrre1UrcY';
 
@@ -72,14 +60,6 @@ ${INCOTERMS_SUMMARY}
 
 CUSTOMER ORDER DATA:
 ${orderText}`;
-}
-
-function extractReplyText(xaiResponse) {
-  // chat/completions format: choices[0].message.content
-  return (xaiResponse.choices &&
-    xaiResponse.choices[0] &&
-    xaiResponse.choices[0].message &&
-    xaiResponse.choices[0].message.content) || null;
 }
 
 exports.handler = async function (event) {
@@ -139,7 +119,10 @@ exports.handler = async function (event) {
       return { statusCode: res.status, body: JSON.stringify({ error: (data.error && data.error.message) || 'xAI request failed' }) };
     }
 
-    const reply = extractReplyText(data) || "Sorry, I couldn't put together a reply just now — try again, or use the RFQ form.";
+    // chat/completions response format
+    const reply = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content)
+      || "Sorry, I couldn't put together a reply just now — try again, or use the RFQ form.";
+
     return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reply }) };
   } catch (err) {
     return { statusCode: 502, body: JSON.stringify({ error: `Could not reach xAI: ${err.message}` }) };
