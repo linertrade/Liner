@@ -62,6 +62,22 @@ CUSTOMER ORDER DATA:
 ${orderText}`;
 }
 
+// Different xAI failure types (bad key, no billing, bad model, rate limit)
+// don't all shape their error the same way — check a few possibilities
+// instead of assuming one, and fall back to the raw response text so we
+// NEVER show a blank/generic message again.
+function extractXaiError(status, data, rawText) {
+  if (data) {
+    if (data.error) {
+      if (typeof data.error === 'string') return data.error;
+      if (data.error.message) return data.error.message;
+    }
+    if (data.message) return data.message;
+  }
+  if (rawText) return rawText.slice(0, 300);
+  return `xAI returned HTTP ${status} with no error body`;
+}
+
 exports.handler = async function (event) {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
@@ -114,13 +130,19 @@ exports.handler = async function (event) {
       }),
     });
 
-    const data = await res.json();
+    // Read as text first — error responses aren't always valid JSON, and we
+    // don't want to lose the real reason behind a JSON.parse crash.
+    const rawText = await res.text();
+    let data = null;
+    try { data = JSON.parse(rawText); } catch { /* leave data null, use rawText below */ }
+
     if (!res.ok) {
-      return { statusCode: res.status, body: JSON.stringify({ error: (data.error && data.error.message) || 'xAI request failed' }) };
+      const errMsg = extractXaiError(res.status, data, rawText);
+      console.error('xAI error', res.status, rawText);
+      return { statusCode: res.status, body: JSON.stringify({ error: `xAI ${res.status}: ${errMsg}` }) };
     }
 
-    // chat/completions response format
-    const reply = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content)
+    const reply = (data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content)
       || "Sorry, I couldn't put together a reply just now — try again, or use the RFQ form.";
 
     return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reply }) };
